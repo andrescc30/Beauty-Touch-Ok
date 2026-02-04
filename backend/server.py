@@ -440,7 +440,8 @@ async def create_appointment(appointment: AppointmentCreate, user = Depends(get_
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
-    await db.appointments.insert_one(apt_dict)
+    # Insertar en BD (esto modifica apt_dict agregando _id)
+    await db.appointments.insert_one(apt_dict.copy())
     
     user_data = await db.users.find_one({"id": user["user_id"]}, {"_id": 0})
     service = await db.services.find_one({"id": appointment.service_id}, {"_id": 0})
@@ -478,7 +479,16 @@ Te enviaremos un recordatorio 24h antes de tu cita.
         
         send_notification(user_data["telefono"], message, prefer_whatsapp=True)
     
-    return apt_dict
+    # Retornar copia sin _id
+    return {
+        "id": apt_dict["id"],
+        "user_id": apt_dict["user_id"],
+        "service_id": apt_dict["service_id"],
+        "fecha": apt_dict["fecha"],
+        "estado": apt_dict["estado"],
+        "reminder_sent": apt_dict["reminder_sent"],
+        "created_at": apt_dict["created_at"]
+    }
 
 @api_router.post("/appointments/{appointment_id}/upload-proof")
 async def upload_payment_proof(appointment_id: str, file: UploadFile = File(...), user = Depends(get_current_user)):

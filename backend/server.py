@@ -33,6 +33,7 @@ JWT_ALGORITHM = "HS256"
 twilio_account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
 twilio_auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
 twilio_phone = os.environ.get('TWILIO_PHONE_NUMBER')
+twilio_whatsapp = os.environ.get('TWILIO_WHATSAPP_NUMBER', 'whatsapp:+14155238886')  # Twilio Sandbox por defecto
 twilio_client = None
 if twilio_account_sid and twilio_auth_token:
     twilio_client = Client(twilio_account_sid, twilio_auth_token)

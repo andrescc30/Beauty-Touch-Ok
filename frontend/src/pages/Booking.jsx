@@ -180,32 +180,49 @@ export default function Booking({ user, onLogout }) {
                     data-testid="date-input"
                   />
                 </div>
+                {fecha && (
+                  <p className={`text-sm ${isDayClosed(fecha) ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {getScheduleMessage(fecha)}
+                  </p>
+                )}
               </div>
 
-              {fecha && selectedService && (
+              {fecha && selectedService && !isDayClosed(fecha) && (
                 <div className="space-y-2">
                   <Label>Hora Disponible</Label>
-                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                    {timeSlots.map((time) => {
-                      const isOccupied = occupiedHours.includes(time);
-                      return (
-                        <Button
-                          key={time}
-                          type="button"
-                          variant={hora === time ? 'default' : 'outline'}
-                          className={`h-12 ${
-                            isOccupied ? 'opacity-50 cursor-not-allowed' : 'btn-primary-hover'
-                          }`}
-                          onClick={() => !isOccupied && setHora(time)}
-                          disabled={isOccupied}
-                          data-testid={`time-slot-${time}`}
-                        >
-                          <Clock className="w-4 h-4 mr-2" />
-                          {time}
-                        </Button>
-                      );
-                    })}
-                  </div>
+                  {availableSlots.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No hay horarios disponibles para esta fecha</p>
+                  ) : (
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                      {availableSlots.map((time) => {
+                        const isOccupied = occupiedHours.includes(time);
+                        return (
+                          <Button
+                            key={time}
+                            type="button"
+                            variant={hora === time ? 'default' : 'outline'}
+                            className={`h-12 ${
+                              isOccupied ? 'opacity-50 cursor-not-allowed' : 'btn-primary-hover'
+                            }`}
+                            onClick={() => !isOccupied && setHora(time)}
+                            disabled={isOccupied}
+                            data-testid={`time-slot-${time}`}
+                          >
+                            <Clock className="w-4 h-4 mr-2" />
+                            {time}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {fecha && isDayClosed(fecha) && (
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-destructive text-center font-medium">
+                    ❌ Cerrado los domingos. Por favor selecciona otro día.
+                  </p>
                 </div>
               )}
 

@@ -54,6 +54,14 @@ class UserLogin(BaseModel):
 class PhoneLogin(BaseModel):
     telefono: str
 
+class AdminPhoneLogin(BaseModel):
+    telefono: str
+    password: str
+
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str
+
 class Service(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     nombre: str

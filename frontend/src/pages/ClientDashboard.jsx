@@ -19,6 +19,10 @@ export default function ClientDashboard({ user, onLogout }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const fileInputRefs = useRef({});
+  const [reviewDialog, setReviewDialog] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [comentario, setComentario] = useState('');
 
   useEffect(() => {
     fetchAppointments();

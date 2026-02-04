@@ -39,14 +39,26 @@ export default function AdminDashboard({ user, onLogout }) {
     fecha_inicio: '',
     fecha_fin: ''
   });
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: ''
+  });
   const [editingService, setEditingService] = useState(null);
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
   const [isPromotionDialogOpen, setIsPromotionDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const fileInputRef = useRef(null);
   const [uploadingServiceId, setUploadingServiceId] = useState(null);
+  const [showTempPasswordWarning, setShowTempPasswordWarning] = useState(false);
 
   useEffect(() => {
     fetchData();
+    // Check if user has temp password
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    if (userData.is_temp_password) {
+      setShowTempPasswordWarning(true);
+    }
   }, []);
 
   const fetchData = async () => {

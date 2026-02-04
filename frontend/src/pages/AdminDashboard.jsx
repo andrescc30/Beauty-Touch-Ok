@@ -281,13 +281,40 @@ export default function AdminDashboard({ user, onLogout }) {
       
       <section className="pt-32 pb-20 px-6" data-testid="admin-dashboard">
         <div className="container mx-auto max-w-7xl">
+          {showTempPasswordWarning && (
+            <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+              <p className="text-yellow-800 font-medium text-center">
+                ⚠️ Estás usando una contraseña temporal. Por favor cámbiala por seguridad.
+                <Button
+                  size="sm"
+                  onClick={() => setIsPasswordDialogOpen(true)}
+                  className="ml-4"
+                  data-testid="change-password-warning-button"
+                >
+                  Cambiar Ahora
+                </Button>
+              </p>
+            </div>
+          )}
+
           <div className="mb-12 fade-in">
-            <h1 className="text-5xl md:text-6xl font-heading font-medium text-foreground mb-4" data-testid="admin-title">
-              Panel de Administración
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Gestiona servicios, citas y promociones
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-5xl md:text-6xl font-heading font-medium text-foreground mb-4" data-testid="admin-title">
+                  Panel de Administración
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                  Gestiona servicios, citas y promociones
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setIsPasswordDialogOpen(true)}
+                data-testid="change-password-button"
+              >
+                Cambiar Contraseña
+              </Button>
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">

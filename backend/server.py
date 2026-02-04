@@ -14,6 +14,7 @@ import bcrypt
 import jwt
 from twilio.rest import Client
 import base64
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -36,6 +37,8 @@ twilio_client = None
 if twilio_account_sid and twilio_auth_token:
     twilio_client = Client(twilio_account_sid, twilio_auth_token)
 
+scheduler = AsyncIOScheduler()
+
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
@@ -55,6 +58,8 @@ class Service(BaseModel):
     duracion: int
     imagen_url: Optional[str] = None
     activo: bool = True
+    rating_promedio: float = 0.0
+    total_reviews: int = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ServiceCreate(BaseModel):
@@ -71,6 +76,7 @@ class Appointment(BaseModel):
     fecha: datetime
     estado: str = "pendiente"
     comprobante_pago: Optional[str] = None
+    reminder_sent: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class AppointmentCreate(BaseModel):
@@ -94,6 +100,53 @@ class PromotionCreate(BaseModel):
     descripcion: str
     fecha_inicio: str
     fecha_fin: str
+
+class Review(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    service_id: str
+    appointment_id: str
+    rating: int
+    comentario: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ReviewCreate(BaseModel):
+    service_id: str
+    appointment_id: str
+    rating: int
+    comentario: str
+
+class GalleryItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    service_id: str
+    titulo: str
+    descripcion: str
+    imagen_antes: str
+    imagen_despues: str
+    activo: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class GalleryCreate(BaseModel):
+    service_id: str
+    titulo: str
+    descripcion: str
+
+class Package(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    nombre: str
+    descripcion: str
+    service_ids: List[str]
+    precio_original: float
+    precio_paquete: float
+    descuento_porcentaje: float
+    activo: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PackageCreate(BaseModel):
+    nombre: str
+    descripcion: str
+    service_ids: List[str]
+    precio_paquete: float
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -133,6 +186,37 @@ def send_sms_notification(phone: str, message: str):
             )
         except Exception as e:
             logging.error(f"Error enviando SMS: {str(e)}")
+
+async def send_appointment_reminders():
+    """Job que se ejecuta cada hora para enviar recordatorios de citas"""
+    try:
+        now = datetime.now(timezone.utc)
+        tomorrow = now + timedelta(hours=24)
+        
+        appointments = await db.appointments.find({
+            "estado": {"$in": ["confirmada", "pendiente"]},
+            "reminder_sent": False
+        }, {"_id": 0}).to_list(1000)
+        
+        for apt in appointments:
+            apt_time = datetime.fromisoformat(apt["fecha"])
+            time_until = apt_time - now
+            
+            if timedelta(hours=23) <= time_until <= timedelta(hours=25):
+                user = await db.users.find_one({"id": apt["user_id"]}, {"_id": 0})
+                service = await db.services.find_one({"id": apt["service_id"]}, {"_id": 0})
+                
+                if user and service:
+                    message = f"Beauty Touch Nails: Recordatorio de tu cita de {service['nombre']} mañana a las {apt_time.strftime('%H:%M')}. ¡Te esperamos!"
+                    send_sms_notification(user["telefono"], message)
+                    
+                    await db.appointments.update_one(
+                        {"id": apt["id"]},
+                        {"$set": {"reminder_sent": True}}
+                    )
+                    logging.info(f"Recordatorio enviado para cita {apt['id']}")
+    except Exception as e:
+        logging.error(f"Error en job de recordatorios: {str(e)}")
 
 @api_router.post("/auth/register")
 async def register(user_data: UserRegister):
@@ -184,6 +268,17 @@ async def login(credentials: UserLogin):
 @api_router.get("/services")
 async def get_services():
     services = await db.services.find({"activo": True}, {"_id": 0}).to_list(100)
+    
+    for service in services:
+        reviews = await db.reviews.find({"service_id": service["id"]}, {"_id": 0}).to_list(1000)
+        if reviews:
+            avg_rating = sum(r["rating"] for r in reviews) / len(reviews)
+            service["rating_promedio"] = round(avg_rating, 1)
+            service["total_reviews"] = len(reviews)
+        else:
+            service["rating_promedio"] = 0
+            service["total_reviews"] = 0
+    
     return services
 
 @api_router.post("/services")
@@ -191,8 +286,6 @@ async def create_service(service: ServiceCreate, user = Depends(get_admin_user))
     service_dict = Service(**service.model_dump()).model_dump()
     service_dict["created_at"] = service_dict["created_at"].isoformat()
     await db.services.insert_one(service_dict)
-    # Return without _id field
-    service_dict.pop("_id", None)
     return service_dict
 
 @api_router.put("/services/{service_id}")
@@ -245,6 +338,12 @@ async def get_appointments(user = Depends(get_current_user)):
         if user["role"] == "admin":
             user_data = await db.users.find_one({"id": apt["user_id"]}, {"_id": 0, "password": 0})
             apt["user"] = user_data
+        
+        apt["can_review"] = (
+            apt["estado"] == "confirmada" and 
+            datetime.fromisoformat(apt["fecha"]) < datetime.now(timezone.utc) and
+            not await db.reviews.find_one({"appointment_id": apt["id"]})
+        )
     
     return appointments
 
@@ -267,6 +366,7 @@ async def create_appointment(appointment: AppointmentCreate, user = Depends(get_
         "service_id": appointment.service_id,
         "fecha": fecha_hora.isoformat(),
         "estado": "pendiente",
+        "reminder_sent": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -279,8 +379,6 @@ async def create_appointment(appointment: AppointmentCreate, user = Depends(get_
         message = f"Beauty Touch Nails: Tu cita de {service['nombre']} ha sido agendada para el {appointment.fecha} a las {appointment.hora}. Por favor envía tu comprobante de pago."
         send_sms_notification(user_data["telefono"], message)
     
-    # Return without _id field
-    apt_dict.pop("_id", None)
     return apt_dict
 
 @api_router.post("/appointments/{appointment_id}/upload-proof")
@@ -352,8 +450,6 @@ async def create_promotion(promotion: PromotionCreate, user = Depends(get_admin_
     }
     
     await db.promotions.insert_one(promo_dict)
-    # Return without _id field
-    promo_dict.pop("_id", None)
     return promo_dict
 
 @api_router.delete("/promotions/{promotion_id}")
@@ -365,6 +461,164 @@ async def delete_promotion(promotion_id: str, user = Depends(get_admin_user)):
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Promoción no encontrada")
     return {"message": "Promoción eliminada"}
+
+@api_router.post("/reviews")
+async def create_review(review: ReviewCreate, user = Depends(get_current_user)):
+    appointment = await db.appointments.find_one({
+        "id": review.appointment_id,
+        "user_id": user["user_id"],
+        "estado": "confirmada"
+    }, {"_id": 0})
+    
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Cita no encontrada o no confirmada")
+    
+    existing = await db.reviews.find_one({"appointment_id": review.appointment_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya has dejado una reseña para esta cita")
+    
+    review_dict = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["user_id"],
+        "service_id": review.service_id,
+        "appointment_id": review.appointment_id,
+        "rating": review.rating,
+        "comentario": review.comentario,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.reviews.insert_one(review_dict)
+    return {"message": "Reseña creada exitosamente"}
+
+@api_router.get("/reviews/{service_id}")
+async def get_service_reviews(service_id: str):
+    reviews = await db.reviews.find({"service_id": service_id}, {"_id": 0}).to_list(1000)
+    
+    for review in reviews:
+        user = await db.users.find_one({"id": review["user_id"]}, {"_id": 0, "password": 0})
+        review["user_nombre"] = user["nombre"] if user else "Usuario"
+    
+    return reviews
+
+@api_router.get("/gallery")
+async def get_gallery():
+    gallery_items = await db.gallery.find({"activo": True}, {"_id": 0}).to_list(100)
+    
+    for item in gallery_items:
+        service = await db.services.find_one({"id": item["service_id"]}, {"_id": 0})
+        item["service"] = service
+    
+    return gallery_items
+
+@api_router.post("/gallery")
+async def create_gallery_item(gallery: GalleryCreate, user = Depends(get_admin_user)):
+    gallery_dict = {
+        "id": str(uuid.uuid4()),
+        "service_id": gallery.service_id,
+        "titulo": gallery.titulo,
+        "descripcion": gallery.descripcion,
+        "imagen_antes": "",
+        "imagen_despues": "",
+        "activo": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.gallery.insert_one(gallery_dict)
+    return gallery_dict
+
+@api_router.post("/gallery/{gallery_id}/upload-before")
+async def upload_before_image(gallery_id: str, file: UploadFile = File(...), user = Depends(get_admin_user)):
+    contents = await file.read()
+    base64_image = base64.b64encode(contents).decode('utf-8')
+    image_url = f"data:{file.content_type};base64,{base64_image}"
+    
+    result = await db.gallery.update_one(
+        {"id": gallery_id},
+        {"$set": {"imagen_antes": image_url}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item no encontrado")
+    
+    return {"imagen_url": image_url}
+
+@api_router.post("/gallery/{gallery_id}/upload-after")
+async def upload_after_image(gallery_id: str, file: UploadFile = File(...), user = Depends(get_admin_user)):
+    contents = await file.read()
+    base64_image = base64.b64encode(contents).decode('utf-8')
+    image_url = f"data:{file.content_type};base64,{base64_image}"
+    
+    result = await db.gallery.update_one(
+        {"id": gallery_id},
+        {"$set": {"imagen_despues": image_url}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item no encontrado")
+    
+    return {"imagen_url": image_url}
+
+@api_router.delete("/gallery/{gallery_id}")
+async def delete_gallery_item(gallery_id: str, user = Depends(get_admin_user)):
+    result = await db.gallery.update_one(
+        {"id": gallery_id},
+        {"$set": {"activo": False}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item no encontrado")
+    return {"message": "Item eliminado"}
+
+@api_router.get("/packages")
+async def get_packages():
+    packages = await db.packages.find({"activo": True}, {"_id": 0}).to_list(100)
+    
+    for package in packages:
+        services = []
+        for service_id in package["service_ids"]:
+            service = await db.services.find_one({"id": service_id}, {"_id": 0})
+            if service:
+                services.append(service)
+        package["services"] = services
+    
+    return packages
+
+@api_router.post("/packages")
+async def create_package(package: PackageCreate, user = Depends(get_admin_user)):
+    services = []
+    precio_original = 0
+    
+    for service_id in package.service_ids:
+        service = await db.services.find_one({"id": service_id}, {"_id": 0})
+        if service:
+            services.append(service)
+            precio_original += service["precio"]
+    
+    descuento = ((precio_original - package.precio_paquete) / precio_original) * 100
+    
+    package_dict = {
+        "id": str(uuid.uuid4()),
+        "nombre": package.nombre,
+        "descripcion": package.descripcion,
+        "service_ids": package.service_ids,
+        "precio_original": precio_original,
+        "precio_paquete": package.precio_paquete,
+        "descuento_porcentaje": round(descuento, 1),
+        "activo": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.packages.insert_one(package_dict)
+    return package_dict
+
+@api_router.delete("/packages/{package_id}")
+async def delete_package(package_id: str, user = Depends(get_admin_user)):
+    result = await db.packages.update_one(
+        {"id": package_id},
+        {"$set": {"activo": False}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Paquete no encontrado")
+    return {"message": "Paquete eliminado"}
 
 @api_router.get("/stats")
 async def get_stats(user = Depends(get_admin_user)):
@@ -378,6 +632,41 @@ async def get_stats(user = Depends(get_admin_user)):
         "citas_pendientes": pending_appointments,
         "citas_confirmadas": confirmed_appointments,
         "servicios_activos": total_services
+    }
+
+@api_router.get("/stats/advanced")
+async def get_advanced_stats(user = Depends(get_admin_user)):
+    appointments = await db.appointments.find({"estado": "confirmada"}, {"_id": 0}).to_list(10000)
+    services = await db.services.find({"activo": True}, {"_id": 0}).to_list(100)
+    
+    ingresos_por_mes = {}
+    servicios_populares = {}
+    ocupacion_semanal = {str(i): 0 for i in range(7)}
+    
+    for apt in appointments:
+        service = await db.services.find_one({"id": apt["service_id"]}, {"_id": 0})
+        if service:
+            apt_date = datetime.fromisoformat(apt["fecha"])
+            mes_key = apt_date.strftime("%Y-%m")
+            
+            ingresos_por_mes[mes_key] = ingresos_por_mes.get(mes_key, 0) + service["precio"]
+            
+            servicios_populares[service["nombre"]] = servicios_populares.get(service["nombre"], 0) + 1
+            
+            dia_semana = str(apt_date.weekday())
+            ocupacion_semanal[dia_semana] = ocupacion_semanal.get(dia_semana, 0) + 1
+    
+    ingresos_chart = [{"mes": k, "ingresos": v} for k, v in sorted(ingresos_por_mes.items())]
+    
+    servicios_chart = [{"servicio": k, "cantidad": v} for k, v in sorted(servicios_populares.items(), key=lambda x: x[1], reverse=True)][:5]
+    
+    dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+    ocupacion_chart = [{"dia": dias[int(k)], "citas": v} for k, v in sorted(ocupacion_semanal.items())]
+    
+    return {
+        "ingresos_mensuales": ingresos_chart,
+        "servicios_populares": servicios_chart,
+        "ocupacion_semanal": ocupacion_chart
     }
 
 app.include_router(api_router)
@@ -396,6 +685,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_event():
+    scheduler.add_job(send_appointment_reminders, 'interval', hours=1)
+    scheduler.start()
+    logger.info("Scheduler iniciado - Recordatorios de citas cada hora")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    scheduler.shutdown()
     client_db.close()

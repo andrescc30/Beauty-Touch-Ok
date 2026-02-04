@@ -3,9 +3,12 @@ import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Calendar, Clock, Upload, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, Upload, CheckCircle, XCircle, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 

@@ -320,7 +320,8 @@ async def login(credentials: UserLogin):
             "id": user["id"],
             "email": user["email"],
             "nombre": user["nombre"],
-            "role": user["role"]
+            "role": user["role"],
+            "is_temp_password": user.get("is_temp_password", False)
         }
     }
 
@@ -342,6 +343,46 @@ async def login_phone(credentials: PhoneLogin):
             "role": user["role"]
         }
     }
+
+@api_router.post("/auth/login-admin")
+async def login_admin(credentials: AdminPhoneLogin):
+    user = await db.users.find_one({"telefono": credentials.telefono, "role": "admin"}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="Administrador no encontrado")
+    
+    if not verify_password(credentials.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+    
+    token = create_token(user["id"], user["email"], user["role"])
+    
+    return {
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "nombre": user["nombre"],
+            "telefono": user["telefono"],
+            "role": user["role"],
+            "is_temp_password": user.get("is_temp_password", False)
+        }
+    }
+
+@api_router.post("/auth/change-password")
+async def change_password(password_data: ChangePassword, user = Depends(get_current_user)):
+    user_doc = await db.users.find_one({"id": user["user_id"]}, {"_id": 0})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    if not verify_password(password_data.current_password, user_doc["password"]):
+        raise HTTPException(status_code=400, detail="Contraseña actual incorrecta")
+    
+    new_hashed = hash_password(password_data.new_password)
+    await db.users.update_one(
+        {"id": user["user_id"]},
+        {"$set": {"password": new_hashed, "is_temp_password": False}}
+    )
+    
+    return {"message": "Contraseña actualizada exitosamente"}
 
 @api_router.get("/services")
 async def get_services():

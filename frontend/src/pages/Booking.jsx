@@ -113,6 +113,26 @@ export default function Booking({ user, onLogout }) {
     return today.toISOString().split('T')[0];
   };
 
+  const isDayClosed = (dateString) => {
+    if (!dateString) return false;
+    const date = new Date(dateString + 'T00:00:00');
+    return date.getDay() === 0; // Domingo
+  };
+
+  const getScheduleMessage = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    
+    if (dayOfWeek === 0) {
+      return '❌ Cerrado los domingos';
+    } else if (dayOfWeek === 6) {
+      return '🕐 Sábado: 10:00 am - 3:00 pm';
+    } else {
+      return '🕐 Lunes a Viernes: 10:00 am - 7:00 pm';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar user={user} onLogout={onLogout} />

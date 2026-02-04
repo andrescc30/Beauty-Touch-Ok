@@ -263,6 +263,53 @@ export default function ClientDashboard({ user, onLogout }) {
           )}
         </div>
       </section>
+
+      <Dialog open={reviewDialog} onOpenChange={setReviewDialog}>
+        <DialogContent data-testid="review-dialog">
+          <DialogHeader>
+            <DialogTitle>Dejar Reseña</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label>Calificación</Label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setRating(star)}
+                    className="focus:outline-none"
+                    data-testid={`rating-star-${star}`}
+                  >
+                    <Star
+                      className={`w-8 h-8 cursor-pointer transition-colors ${
+                        star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 hover:text-yellow-200'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="comentario">Comentario</Label>
+              <Textarea
+                id="comentario"
+                value={comentario}
+                onChange={(e) => setComentario(e.target.value)}
+                placeholder="Cuéntanos sobre tu experiencia..."
+                className="min-h-[100px]"
+                data-testid="review-comment-input"
+              />
+            </div>
+            <Button
+              onClick={handleSubmitReview}
+              className="w-full rounded-full btn-primary-hover"
+              data-testid="submit-review-button"
+            >
+              Enviar Reseña
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -220,30 +220,52 @@ async def send_appointment_reminders():
     """Job que se ejecuta cada hora para enviar recordatorios de citas"""
     try:
         now = datetime.now(timezone.utc)
-        tomorrow = now + timedelta(hours=24)
         
+        # Buscar citas en las próximas 24 horas que no han recibido recordatorio
         appointments = await db.appointments.find({
             "estado": {"$in": ["confirmada", "pendiente"]},
             "reminder_sent": False
         }, {"_id": 0}).to_list(1000)
         
+        reminders_sent = 0
         for apt in appointments:
             apt_time = datetime.fromisoformat(apt["fecha"])
             time_until = apt_time - now
             
+            # Enviar recordatorio si la cita es en 23-25 horas
             if timedelta(hours=23) <= time_until <= timedelta(hours=25):
                 user = await db.users.find_one({"id": apt["user_id"]}, {"_id": 0})
                 service = await db.services.find_one({"id": apt["service_id"]}, {"_id": 0})
                 
                 if user and service:
-                    message = f"Beauty Touch Nails: Recordatorio de tu cita de {service['nombre']} mañana a las {apt_time.strftime('%H:%M')}. ¡Te esperamos!"
-                    send_sms_notification(user["telefono"], message)
+                    fecha_formateada = apt_time.strftime("%d/%m/%Y")
+                    hora_formateada = apt_time.strftime("%I:%M %p")
+                    
+                    message = f"""🌸 *Beauty Touch Nails* 🌸
+
+¡Hola {user['nombre']}!
+
+📅 Recordatorio de tu cita:
+• Servicio: {service['nombre']}
+• Fecha: {fecha_formateada}
+• Hora: {hora_formateada}
+
+Te esperamos mañana. Si tienes alguna duda, contáctanos.
+
+¡Gracias por confiar en nosotros! ✨"""
+                    
+                    send_notification(user["telefono"], message, prefer_whatsapp=True)
                     
                     await db.appointments.update_one(
                         {"id": apt["id"]},
                         {"$set": {"reminder_sent": True}}
                     )
-                    logging.info(f"Recordatorio enviado para cita {apt['id']}")
+                    reminders_sent += 1
+                    logging.info(f"Recordatorio enviado para cita {apt['id']} a {user['nombre']}")
+        
+        if reminders_sent > 0:
+            logging.info(f"Total de recordatorios enviados: {reminders_sent}")
+            
     except Exception as e:
         logging.error(f"Error en job de recordatorios: {str(e)}")
 

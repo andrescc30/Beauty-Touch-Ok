@@ -191,6 +191,8 @@ async def create_service(service: ServiceCreate, user = Depends(get_admin_user))
     service_dict = Service(**service.model_dump()).model_dump()
     service_dict["created_at"] = service_dict["created_at"].isoformat()
     await db.services.insert_one(service_dict)
+    # Return without _id field
+    service_dict.pop("_id", None)
     return service_dict
 
 @api_router.put("/services/{service_id}")

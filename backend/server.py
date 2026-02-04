@@ -279,6 +279,8 @@ async def create_appointment(appointment: AppointmentCreate, user = Depends(get_
         message = f"Beauty Touch Nails: Tu cita de {service['nombre']} ha sido agendada para el {appointment.fecha} a las {appointment.hora}. Por favor envía tu comprobante de pago."
         send_sms_notification(user_data["telefono"], message)
     
+    # Return without _id field
+    apt_dict.pop("_id", None)
     return apt_dict
 
 @api_router.post("/appointments/{appointment_id}/upload-proof")

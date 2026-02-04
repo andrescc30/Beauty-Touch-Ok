@@ -46,7 +46,9 @@ function App() {
           <Route path="/galeria" element={<Gallery user={user} onLogout={handleLogout} />} />
           <Route path="/paquetes" element={<Packages user={user} onLogout={handleLogout} />} />
           <Route path="/reservar" element={user ? <Booking user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/login" element={!user ? <Login setUser={setUser} /> : <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />} />
+          <Route path="/login" element={!user ? <LoginSelection /> : <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />} />
+          <Route path="/login/cliente" element={!user ? <ClientLogin setUser={setUser} /> : <Navigate to="/dashboard" />} />
+          <Route path="/login/admin" element={!user ? <AdminLogin setUser={setUser} /> : <Navigate to="/admin" />} />
           <Route path="/register" element={!user ? <Register setUser={setUser} /> : <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />} />
           <Route path="/dashboard" element={user && user.role === 'cliente' ? <ClientDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/admin" element={user && user.role === 'admin' ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />

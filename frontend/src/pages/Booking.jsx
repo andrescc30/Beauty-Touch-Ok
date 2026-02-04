@@ -238,10 +238,17 @@ export default function Booking({ user, onLogout }) {
           </Card>
 
           <div className="mt-8 p-6 bg-secondary rounded-xl" data-testid="booking-info">
+            <h3 className="font-heading text-xl mb-3">Horarios de Atención:</h3>
+            <ul className="space-y-2 text-muted-foreground mb-6">
+              <li>🕐 <strong>Lunes a Viernes:</strong> 10:00 am - 7:00 pm</li>
+              <li>🕐 <strong>Sábados:</strong> 10:00 am - 3:00 pm</li>
+              <li>❌ <strong>Domingos:</strong> Cerrado</li>
+            </ul>
             <h3 className="font-heading text-xl mb-3">Importante:</h3>
             <ul className="space-y-2 text-muted-foreground">
-              <li>• Después de agendar, recibirás un mensaje de confirmación</li>
-              <li>• Deberás subir tu comprobante de pago desde tu panel de citas</li>
+              <li>• Recibirás confirmación por WhatsApp al agendar</li>
+              <li>• Te enviaremos un recordatorio 24h antes de tu cita</li>
+              <li>• Deberás subir tu comprobante de pago desde tu panel</li>
               <li>• Tu cita será confirmada una vez validemos el pago</li>
             </ul>
           </div>

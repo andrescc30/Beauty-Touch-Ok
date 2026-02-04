@@ -48,6 +48,9 @@ export const Navbar = ({ user, onLogout }) => {
                     </Link>
                   </>
                 )}
+                <span className="text-sm text-muted-foreground hidden md:inline" data-testid="nav-user-greeting">
+                  Hola, {user.nombre}
+                </span>
                 <Button 
                   variant="ghost" 
                   size="sm" 

@@ -237,6 +237,24 @@ export default function ClientDashboard({ user, onLogout }) {
                           </p>
                         </div>
                       )}
+                      
+                      {apt.can_review && (
+                        <div className="mt-4">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedAppointment(apt);
+                              setReviewDialog(true);
+                            }}
+                            className="gap-2"
+                            data-testid={`review-button-${apt.id}`}
+                          >
+                            <Star className="w-4 h-4" />
+                            Dejar Reseña
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Card>

@@ -53,6 +53,9 @@ export default function Booking({ user, onLogout }) {
   useEffect(() => {
     if (selectedService && fecha) {
       fetchAvailability();
+      const slots = getTimeSlotsForDate(fecha);
+      setAvailableSlots(slots);
+      setHora(''); // Reset hora when date changes
     }
   }, [selectedService, fecha]);
 

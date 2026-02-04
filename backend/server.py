@@ -608,8 +608,18 @@ async def create_package(package: PackageCreate, user = Depends(get_admin_user))
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
-    await db.packages.insert_one(package_dict)
-    return package_dict
+    await db.packages.insert_one(package_dict.copy())
+    
+    return {
+        "id": package_dict["id"],
+        "nombre": package_dict["nombre"],
+        "descripcion": package_dict["descripcion"],
+        "service_ids": package_dict["service_ids"],
+        "precio_original": package_dict["precio_original"],
+        "precio_paquete": package_dict["precio_paquete"],
+        "descuento_porcentaje": package_dict["descuento_porcentaje"],
+        "activo": package_dict["activo"]
+    }
 
 @api_router.delete("/packages/{package_id}")
 async def delete_package(package_id: str, user = Depends(get_admin_user)):

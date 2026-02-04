@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Sparkles, ShieldCheck } from 'lucide-react';
+import { Sparkles, ShieldCheck, Phone } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
@@ -12,7 +12,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 export default function AdminLogin({ setUser }) {
-  const [email, setEmail] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -22,18 +22,18 @@ export default function AdminLogin({ setUser }) {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API}/auth/login`, { email, password });
-      
-      if (response.data.user.role !== 'admin') {
-        toast.error('Acceso denegado. Solo administradores pueden ingresar aquí.');
-        setLoading(false);
-        return;
-      }
+      const response = await axios.post(`${API}/auth/login-admin`, { telefono, password });
       
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       setUser(response.data.user);
-      toast.success('¡Bienvenido Administrador!');
+      
+      if (response.data.user.is_temp_password) {
+        toast.warning('Por favor cambia tu contraseña temporal');
+      } else {
+        toast.success('¡Bienvenido Administrador!');
+      }
+      
       navigate('/admin');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Error al iniciar sesión');
@@ -54,21 +54,25 @@ export default function AdminLogin({ setUser }) {
             <ShieldCheck className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-heading font-medium mb-2" data-testid="admin-login-title">Panel de Administrador</h1>
-          <p className="text-muted-foreground">Ingresa con tus credenciales</p>
+          <p className="text-muted-foreground">Ingresa con tu teléfono y contraseña</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6" data-testid="admin-login-form">
           <div className="space-y-2">
-            <Label htmlFor="email">Correo Electrónico</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="h-12"
-              data-testid="admin-email-input"
-            />
+            <Label htmlFor="telefono">Número de Teléfono</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
+                id="telefono"
+                type="tel"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="+52..."
+                required
+                className="h-12 pl-10"
+                data-testid="admin-phone-input"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -93,6 +97,14 @@ export default function AdminLogin({ setUser }) {
             {loading ? 'Ingresando...' : 'Ingresar'}
           </Button>
         </form>
+
+        <div className="mt-6 p-4 bg-secondary rounded-lg">
+          <p className="text-sm text-muted-foreground text-center">
+            <strong>Credenciales temporales:</strong><br/>
+            Tel: +5219999999999<br/>
+            Contraseña: admin123
+          </p>
+        </div>
 
         <div className="mt-6 text-center">
           <Link to="/login" className="text-sm text-muted-foreground hover:text-primary" data-testid="back-to-selection">

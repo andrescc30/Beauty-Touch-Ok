@@ -93,6 +93,21 @@ export default function Services({ user, onLogout }) {
                   <p className="text-muted-foreground mb-4" data-testid={`service-description-${service.id}`}>
                     {service.descripcion}
                   </p>
+                  
+                  {service.rating_promedio > 0 && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="font-medium" data-testid={`service-rating-${service.id}`}>
+                          {service.rating_promedio}
+                        </span>
+                      </div>
+                      <span className="text-sm text-muted-foreground" data-testid={`service-reviews-${service.id}`}>
+                        ({service.total_reviews} {service.total_reviews === 1 ? 'reseña' : 'reseñas'})
+                      </span>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between text-sm mb-4">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="w-4 h-4" />

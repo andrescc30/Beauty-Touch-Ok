@@ -8,6 +8,8 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ClientDashboard from '@/pages/ClientDashboard';
 import AdminDashboard from '@/pages/AdminDashboard';
+import Gallery from '@/pages/Gallery';
+import Packages from '@/pages/Packages';
 import { Toaster } from '@/components/ui/sonner';
 
 function App() {

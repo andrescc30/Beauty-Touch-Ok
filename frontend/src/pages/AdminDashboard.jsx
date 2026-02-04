@@ -201,6 +201,44 @@ export default function AdminDashboard({ user, onLogout }) {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      toast.error('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (passwordForm.new_password.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API}/auth/change-password`,
+        {
+          current_password: passwordForm.current_password,
+          new_password: passwordForm.new_password
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      toast.success('Contraseña actualizada exitosamente');
+      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      setIsPasswordDialogOpen(false);
+      setShowTempPasswordWarning(false);
+      
+      // Update user in localStorage
+      const userData = JSON.parse(localStorage.getItem('user'));
+      userData.is_temp_password = false;
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Error al cambiar contraseña');
+    }
+  };
+
   const handleUpdateAppointmentStatus = async (appointmentId, newStatus) => {
     try {
       const token = localStorage.getItem('token');

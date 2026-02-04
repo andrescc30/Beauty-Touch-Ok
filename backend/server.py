@@ -352,6 +352,8 @@ async def create_promotion(promotion: PromotionCreate, user = Depends(get_admin_
     }
     
     await db.promotions.insert_one(promo_dict)
+    # Return without _id field
+    promo_dict.pop("_id", None)
     return promo_dict
 
 @api_router.delete("/promotions/{promotion_id}")

@@ -172,22 +172,34 @@ class BeautyTouchAPITester:
         # Create appointment for tomorrow
         tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
         
+        print(f"  Using service_id: {self.test_service_id}")
+        print(f"  Using date: {tomorrow}")
+        print(f"  Using client token: {self.client_token[:20]}...")
+        
         response = self.make_request('POST', 'appointments', {
             'service_id': self.test_service_id,
             'fecha': tomorrow,
             'hora': '10:00'
         }, token=self.client_token)
         
-        if response and response.status_code == 200:
-            data = response.json()
-            if 'id' in data:
-                self.test_appointment_id = data['id']
-                self.log_test("Appointment Creation", True)
-                return True
+        if response:
+            print(f"  Response status: {response.status_code}")
+            if response.status_code == 200:
+                data = response.json()
+                if 'id' in data:
+                    self.test_appointment_id = data['id']
+                    self.log_test("Appointment Creation", True)
+                    return True
+                else:
+                    self.log_test("Appointment Creation", False, "No appointment ID in response")
             else:
-                self.log_test("Appointment Creation", False, "No appointment ID in response")
+                try:
+                    error_detail = response.json()
+                    self.log_test("Appointment Creation", False, f"Status: {response.status_code}, Detail: {error_detail}")
+                except:
+                    self.log_test("Appointment Creation", False, f"Status: {response.status_code}")
         else:
-            self.log_test("Appointment Creation", False, f"Status: {response.status_code if response else 'No response'}")
+            self.log_test("Appointment Creation", False, "No response received")
         return False
 
     def test_double_booking_prevention(self):

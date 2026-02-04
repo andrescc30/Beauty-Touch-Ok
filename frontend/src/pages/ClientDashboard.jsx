@@ -67,6 +67,36 @@ export default function ClientDashboard({ user, onLogout }) {
     }
   };
 
+  const handleSubmitReview = async () => {
+    if (!rating || !comentario) {
+      toast.error('Por favor completa la calificación y el comentario');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API}/reviews`,
+        {
+          service_id: selectedAppointment.service_id,
+          appointment_id: selectedAppointment.id,
+          rating,
+          comentario
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      toast.success('¡Gracias por tu reseña!');
+      setReviewDialog(false);
+      setRating(0);
+      setComentario('');
+      fetchAppointments();
+    } catch (error) {
+      toast.error('Error al enviar reseña');
+    }
+  };
+
   const getStatusBadge = (estado) => {
     const variants = {
       pendiente: { variant: 'outline', className: 'border-yellow-500 text-yellow-700', icon: Clock },

@@ -446,8 +446,37 @@ async def create_appointment(appointment: AppointmentCreate, user = Depends(get_
     service = await db.services.find_one({"id": appointment.service_id}, {"_id": 0})
     
     if user_data and service:
-        message = f"Beauty Touch Nails: Tu cita de {service['nombre']} ha sido agendada para el {appointment.fecha} a las {appointment.hora}. Por favor envía tu comprobante de pago."
-        send_sms_notification(user_data["telefono"], message)
+        fecha_obj = datetime.fromisoformat(f"{appointment.fecha}T{appointment.hora}")
+        fecha_formateada = fecha_obj.strftime("%d/%m/%Y")
+        hora_formateada = fecha_obj.strftime("%I:%M %p")
+        
+        # Obtener día de la semana
+        dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+        dia_semana = dias[fecha_obj.weekday()]
+        
+        message = f"""🌸 *Beauty Touch Nails* 🌸
+
+¡Hola {user_data['nombre']}!
+
+✅ Tu cita ha sido agendada exitosamente:
+
+📋 Servicio: {service['nombre']}
+📅 Fecha: {dia_semana}, {fecha_formateada}
+🕐 Hora: {hora_formateada}
+💰 Precio: ${service['precio']}
+
+📸 Por favor envía tu comprobante de pago desde tu panel de citas para confirmar tu reserva.
+
+📍 Horarios de atención:
+• Lun-Vie: 10:00 am - 7:00 pm
+• Sábados: 10:00 am - 3:00 pm
+• Domingos: Cerrado
+
+Te enviaremos un recordatorio 24h antes de tu cita.
+
+¡Gracias por confiar en nosotros! ✨"""
+        
+        send_notification(user_data["telefono"], message, prefer_whatsapp=True)
     
     return apt_dict
 

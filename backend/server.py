@@ -584,14 +584,15 @@ async def get_packages():
 
 @api_router.post("/packages")
 async def create_package(package: PackageCreate, user = Depends(get_admin_user)):
-    services = []
     precio_original = 0
     
     for service_id in package.service_ids:
         service = await db.services.find_one({"id": service_id}, {"_id": 0})
         if service:
-            services.append(service)
             precio_original += service["precio"]
+    
+    if precio_original == 0:
+        raise HTTPException(status_code=400, detail="No se encontraron servicios válidos")
     
     descuento = ((precio_original - package.precio_paquete) / precio_original) * 100
     
@@ -599,9 +600,9 @@ async def create_package(package: PackageCreate, user = Depends(get_admin_user))
         "id": str(uuid.uuid4()),
         "nombre": package.nombre,
         "descripcion": package.descripcion,
-        "service_ids": package.service_ids,
-        "precio_original": precio_original,
-        "precio_paquete": package.precio_paquete,
+        "service_ids": list(package.service_ids),
+        "precio_original": float(precio_original),
+        "precio_paquete": float(package.precio_paquete),
         "descuento_porcentaje": round(descuento, 1),
         "activo": True,
         "created_at": datetime.now(timezone.utc).isoformat()

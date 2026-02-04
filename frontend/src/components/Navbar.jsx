@@ -16,6 +16,12 @@ export const Navbar = ({ user, onLogout }) => {
             <Link to="/servicios" className="text-foreground hover:text-primary transition-colors" data-testid="nav-services-link">
               Servicios
             </Link>
+            <Link to="/galeria" className="text-foreground hover:text-primary transition-colors" data-testid="nav-gallery-link">
+              Galería
+            </Link>
+            <Link to="/paquetes" className="text-foreground hover:text-primary transition-colors" data-testid="nav-packages-link">
+              Paquetes
+            </Link>
             
             {user ? (
               <>

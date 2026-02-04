@@ -268,6 +268,25 @@ async def login(credentials: UserLogin):
         }
     }
 
+@api_router.post("/auth/login-phone")
+async def login_phone(credentials: PhoneLogin):
+    user = await db.users.find_one({"telefono": credentials.telefono, "role": "cliente"}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="Número de teléfono no encontrado")
+    
+    token = create_token(user["id"], user["email"], user["role"])
+    
+    return {
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "nombre": user["nombre"],
+            "telefono": user["telefono"],
+            "role": user["role"]
+        }
+    }
+
 @api_router.get("/services")
 async def get_services():
     services = await db.services.find({"activo": True}, {"_id": 0}).to_list(100)

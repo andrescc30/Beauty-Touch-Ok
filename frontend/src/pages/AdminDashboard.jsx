@@ -678,6 +678,50 @@ export default function AdminDashboard({ user, onLogout }) {
               </div>
             </TabsContent>
           </Tabs>
+
+          <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+            <DialogContent data-testid="password-dialog">
+              <DialogHeader>
+                <DialogTitle>Cambiar Contraseña</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Contraseña Actual</Label>
+                  <Input
+                    type="password"
+                    value={passwordForm.current_password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
+                    data-testid="current-password-input"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nueva Contraseña</Label>
+                  <Input
+                    type="password"
+                    value={passwordForm.new_password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
+                    data-testid="new-password-input"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Confirmar Nueva Contraseña</Label>
+                  <Input
+                    type="password"
+                    value={passwordForm.confirm_password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
+                    data-testid="confirm-password-input"
+                  />
+                </div>
+                <Button
+                  onClick={handleChangePassword}
+                  className="w-full rounded-full btn-primary-hover"
+                  data-testid="submit-change-password"
+                >
+                  Cambiar Contraseña
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </section>
     </div>

@@ -50,6 +50,9 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class PhoneLogin(BaseModel):
+    telefono: str
+
 class Service(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     nombre: str

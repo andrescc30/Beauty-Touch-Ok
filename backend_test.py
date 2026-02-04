@@ -42,19 +42,19 @@ class BeautyTouchAPITester:
         
         try:
             if method == 'GET':
-                response = requests.get(url, headers=headers, params=data)
+                response = requests.get(url, headers=headers, params=data, timeout=30)
             elif method == 'POST':
                 if files:
-                    response = requests.post(url, headers=headers, files=files, data=data)
+                    response = requests.post(url, headers=headers, files=files, data=data, timeout=30)
                 else:
-                    response = requests.post(url, headers=headers, json=data)
+                    response = requests.post(url, headers=headers, json=data, timeout=30)
             elif method == 'PUT':
                 if files:
-                    response = requests.put(url, headers=headers, files=files, data=data)
+                    response = requests.put(url, headers=headers, files=files, data=data, timeout=30)
                 else:
-                    response = requests.put(url, headers=headers, json=data)
+                    response = requests.put(url, headers=headers, json=data, timeout=30)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=headers)
+                response = requests.delete(url, headers=headers, timeout=30)
             
             return response
         except Exception as e:

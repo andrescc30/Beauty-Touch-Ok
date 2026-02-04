@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Sparkles, Calendar, User, LogOut, ShieldCheck } from 'lucide-react';
+import { Sparkles, Calendar, User, LogOut, ShieldCheck, Camera, Package2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const Navbar = ({ user, onLogout }) => {

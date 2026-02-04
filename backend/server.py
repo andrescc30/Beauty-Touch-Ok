@@ -181,6 +181,7 @@ async def get_admin_user(user = Depends(get_current_user)):
     return user
 
 def send_sms_notification(phone: str, message: str):
+    """Envía notificación por SMS"""
     if twilio_client and twilio_phone:
         try:
             twilio_client.messages.create(
@@ -188,8 +189,32 @@ def send_sms_notification(phone: str, message: str):
                 from_=twilio_phone,
                 to=phone
             )
+            logging.info(f"SMS enviado a {phone}")
         except Exception as e:
             logging.error(f"Error enviando SMS: {str(e)}")
+
+def send_whatsapp_notification(phone: str, message: str):
+    """Envía notificación por WhatsApp"""
+    if twilio_client and twilio_whatsapp:
+        try:
+            # El número del cliente debe tener el prefijo whatsapp:
+            to_whatsapp = f"whatsapp:{phone}" if not phone.startswith('whatsapp:') else phone
+            
+            twilio_client.messages.create(
+                body=message,
+                from_=twilio_whatsapp,
+                to=to_whatsapp
+            )
+            logging.info(f"WhatsApp enviado a {phone}")
+        except Exception as e:
+            logging.error(f"Error enviando WhatsApp: {str(e)}")
+
+def send_notification(phone: str, message: str, prefer_whatsapp: bool = True):
+    """Envía notificación por WhatsApp o SMS según disponibilidad"""
+    if prefer_whatsapp:
+        send_whatsapp_notification(phone, message)
+    else:
+        send_sms_notification(phone, message)
 
 async def send_appointment_reminders():
     """Job que se ejecuta cada hora para enviar recordatorios de citas"""

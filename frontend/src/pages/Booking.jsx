@@ -23,10 +23,28 @@ export default function Booking({ user, onLogout }) {
   const [occupiedHours, setOccupiedHours] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const timeSlots = [
-    '09:00', '10:00', '11:00', '12:00', '13:00', '14:00',
-    '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
-  ];
+  // Horarios de atención según el día
+  const getTimeSlotsForDate = (dateString) => {
+    if (!dateString) return [];
+    
+    const date = new Date(dateString + 'T00:00:00');
+    const dayOfWeek = date.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+    
+    // Domingo cerrado
+    if (dayOfWeek === 0) {
+      return [];
+    }
+    
+    // Sábado: 10:00 am - 3:00 pm
+    if (dayOfWeek === 6) {
+      return ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00'];
+    }
+    
+    // Lunes a Viernes: 10:00 am - 7:00 pm
+    return ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
+  };
+
+  const [availableSlots, setAvailableSlots] = useState([]);
 
   useEffect(() => {
     fetchServices();
